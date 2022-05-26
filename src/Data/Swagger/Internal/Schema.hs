@@ -70,8 +70,20 @@ import Data.Swagger.Internal.TypeShape
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as BSL
 import GHC.TypeLits (TypeError, ErrorMessage(..))
+#if MIN_VERSION_aeson(2,0,0)
 import qualified Data.Aeson.KeyMap as KM
 import Data.Aeson.Key (toText)
+
+toHashMapText :: KM.KeyMap v -> HashMap T.Text v
+toHashMapText = KM.toHashMapText
+#else
+import qualified Data.HashMap.Strict as KM
+toText :: T.Text -> T.Text
+toText = id
+
+toHashMapText :: HashMap a b -> HashMap a b
+toHashMapText = id
+#endif
 
 unnamed :: Schema -> NamedSchema
 unnamed schema = NamedSchema Nothing schema
@@ -353,7 +365,7 @@ sketchSchema = sketch . toJSON
         ischema = case ys of
           (z:_) | allSame -> Just z
           _               -> Nothing
-    go (Object o') = let o = KM.toHashMapText o' in mempty
+    go (Object o') = let o = toHashMapText o' in mempty
       & type_         ?~ SwaggerObject
       & required      .~ HashMap.keys o
       & properties    .~ fmap (Inline . go) (InsOrdHashMap.fromHashMap o)
@@ -408,7 +420,7 @@ sketchStrictSchema = go . toJSON
       where
         sz = length xs
         allUnique = sz == HashSet.size (HashSet.fromList (V.toList xs))
-    go js@(Object o') = let o = KM.toHashMapText o' in mempty
+    go js@(Object o') = let o = toHashMapText o' in mempty
       & type_         ?~ SwaggerObject
       & required      .~ names
       & properties    .~ fmap (Inline . go) (InsOrdHashMap.fromHashMap o)
@@ -416,7 +428,7 @@ sketchStrictSchema = go . toJSON
       & minProperties ?~ fromIntegral (length names)
       & enum_         ?~ [js]
       where
-        names = HashMap.keys (KM.toHashMapText o')
+        names = HashMap.keys (toHashMapText o')
 
 class GToSchema (f :: * -> *) where
   gdeclareNamedSchema :: SchemaOptions -> Proxy f -> Schema -> Declare (Definitions Schema) NamedSchema

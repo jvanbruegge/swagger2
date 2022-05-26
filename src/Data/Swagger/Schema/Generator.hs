@@ -1,6 +1,7 @@
 {-# LANGUAGE GADTs               #-}
 {-# LANGUAGE OverloadedLists     #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE CPP #-}
 
 module Data.Swagger.Schema.Generator where
 
@@ -10,7 +11,12 @@ import           Prelude.Compat
 import           Control.Lens.Operators
 import           Control.Monad                           (filterM)
 import           Data.Aeson
+import Data.HashMap.Strict (HashMap)
+#if MIN_VERSION_aeson(2,0,0)
 import qualified Data.Aeson.KeyMap                       as KM
+#else
+import qualified Data.HashMap.Strict as KM
+#endif
 import           Data.Aeson.Types
 import qualified Data.HashMap.Strict.InsOrd              as M
 import           Data.Maybe
@@ -25,6 +31,15 @@ import qualified Data.Vector                             as V
 import           Test.QuickCheck                         (arbitrary)
 import           Test.QuickCheck.Gen
 import           Test.QuickCheck.Property
+
+#if MIN_VERSION_aeson(2,0,0)
+fromHashMapText :: HashMap Text.Text v -> KM.KeyMap v
+fromHashMapText = KM.fromHashMapText
+#else
+fromHashMapText :: HashMap a b -> HashMap a b
+fromHashMapText = id
+#endif
+
 
 -- | Note: 'schemaGen' may 'error', if schema type is not specified,
 -- and cannot be inferred.
@@ -94,7 +109,7 @@ schemaGen defns schema =
               return . M.fromList $ zip additionalKeys (repeat . schemaGen defns $ dereference defns addlSchema)
             _                                      -> return []
           x <- sequence $ gens <> additionalGens
-          return . Object . KM.fromHashMapText $ M.toHashMap x
+          return . Object . fromHashMapText $ M.toHashMap x
   where
     dereference :: Definitions a -> Referenced a -> a
     dereference _ (Inline a)               = a

@@ -11,8 +11,12 @@ import           Control.Applicative
 import           Control.Lens                        ((&), (.~), (?~))
 import           Data.Aeson
 import           Data.Aeson.Types
+#if MIN_VERSION_aeson(2,0,0)
 import           Data.Aeson.Key
 import qualified Data.Aeson.KeyMap                   as KM
+#else
+import qualified Data.HashMap.Strict as KM
+#endif
 import           Data.Hashable                       (Hashable)
 import           Data.HashMap.Strict                 (HashMap)
 import qualified Data.HashMap.Strict                 as HashMap
@@ -39,6 +43,17 @@ import           Test.Hspec
 import           Test.Hspec.QuickCheck
 import           Test.QuickCheck
 import           Test.QuickCheck.Instances           ()
+
+#if MIN_VERSION_aeson(2,0,0)
+fromHashMapText :: HashMap T.Text v -> KM.KeyMap v
+fromHashMapText = KM.fromHashMapText
+#else
+fromHashMapText :: HashMap a b -> HashMap a b
+fromHashMapText = id
+
+fromString :: String -> T.Text
+fromString = T.pack
+#endif
 
 shouldValidate :: (ToJSON a, ToSchema a) => Proxy a -> a -> Bool
 shouldValidate _ x = validateToJSON x == []
@@ -274,13 +289,15 @@ instance Arbitrary Value where
   -- Weights are almost random
   -- Uniform oneof tends not to build complex objects cause of recursive call.
   arbitrary = resize 4 $ frequency
-    [ (3, Object . KM.fromHashMapText <$> arbitrary)
+    [ (3, Object . fromHashMapText <$> arbitrary)
     , (3, Array  <$> arbitrary)
     , (3, String <$> arbitrary)
     , (3, Number <$> arbitrary)
     , (3, Bool   <$> arbitrary)
     , (1, return Null) ]
 
+#if MIN_VERSION_aeson(2,0,0)
 instance Arbitrary (KM.KeyMap Value) where
   arbitrary = KM.fromHashMapText <$> arbitrary
+#endif
 #endif

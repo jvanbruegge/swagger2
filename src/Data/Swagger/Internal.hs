@@ -15,6 +15,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE CPP #-}
 module Data.Swagger.Internal where
 
 import Prelude ()
@@ -43,7 +44,11 @@ import           Text.Read                (readMaybe)
 
 import           Data.HashMap.Strict.InsOrd (InsOrdHashMap)
 import qualified Data.HashMap.Strict.InsOrd as InsOrdHashMap
+#if MIN_VERSION_aeson(2,0,0)
 import qualified Data.Aeson.KeyMap          as KM
+#else
+import qualified Data.HashMap.Strict        as KM
+#endif
 
 import Generics.SOP.TH                  (deriveGeneric)
 import Data.Swagger.Internal.AesonUtils (sopSwaggerGenericToJSON

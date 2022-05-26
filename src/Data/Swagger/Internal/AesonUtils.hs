@@ -5,6 +5,7 @@
 {-# LANGUAGE ExplicitForAll #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
+{-# LANGUAGE CPP #-}
 module Data.Swagger.Internal.AesonUtils (
     -- * Generic functions
     AesonDefaultValue(..),
@@ -32,8 +33,12 @@ import Data.Aeson          ( Encoding, FromJSON (..), ToJSON (..)
                            , object, pairs, withObject
                            , (.!=), (.:), (.:?), (.=)
                            )
+#if MIN_VERSION_aeson(2,0,0)
 import Data.Aeson.Key   (fromString, toString, fromText, toText)
 import qualified Data.Aeson.KeyMap as KM
+#else
+import qualified Data.HashMap.Strict as KM
+#endif
 import Data.Aeson.Types (Parser, Pair)
 import Data.Bifunctor   (first)
 import Data.Char        (toLower, isUpper)
@@ -47,6 +52,15 @@ import qualified Data.HashMap.Strict as HM
 import qualified Data.Set as Set
 import qualified Data.HashMap.Strict.InsOrd as InsOrd
 import qualified Data.HashSet.InsOrd as InsOrdHS
+
+#if !MIN_VERSION_aeson(2,0,0)
+fromText, toText :: Text -> Text
+fromText = id
+toText = id
+
+fromString :: String -> Text
+fromString = T.pack
+#endif
 
 -------------------------------------------------------------------------------
 -- SwaggerAesonOptions
